@@ -71,7 +71,7 @@
       "endpoints": [
         "https://github.com/lordaimer/alt-sendme/releases/latest/download/latest.json"
       ],
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDE2RDFBNTJDNzg4NjMwNzkKUldSNU1JWjRMS1hSRm1YdFRpbW9jZnNFZ2UwOWlQeitmdlpYQ05RYkRIdHpES2VHUlE0ZXBBQXgK"
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEJFRkM5NkUxODYzNTA3QjcKUldTM0J6V0c0WmI4dmx1QmlsS1czNThOUFp5V3EvR2drVENDUnd1WDI3U1dQaktaQXBteHYvdHgK"
     }
   },
   "bundle": {
