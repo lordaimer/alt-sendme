@@ -13,12 +13,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - platform: 'macos-latest'
-            args: '--target universal-apple-darwin'
           - platform: 'ubuntu-22.04'
             args: ''
-          - platform: 'windows-latest'
-            args: '--bundles nsis,msi'
+
 
     runs-on: ${{ matrix.platform }}
     steps:
@@ -29,32 +26,14 @@ jobs:
         with:
           node-version: lts/*
 
-      - name: Set Rust toolchain
-        shell: bash
-        run: echo "toolchain=stable" >> $GITHUB_ENV
-
       - name: install Rust stable
         uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
       - name: install dependencies (ubuntu only)
         if: matrix.platform == 'ubuntu-22.04'
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
-
-      - name: Install NSIS (Windows only)
-        if: matrix.platform == 'windows-latest'
-        shell: pwsh
-        run: choco install nsis -y
-
-      - name: Add NSIS to PATH
-        if: matrix.platform == 'windows-latest'
-        shell: pwsh
-        run: |
-          $env:Path = "C:\Program Files (x86)\NSIS;" + $env:Path
-          echo "C:\Program Files (x86)\NSIS" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
       - name: Rust cache
         uses: swatinem/rust-cache@v2
@@ -73,43 +52,6 @@ jobs:
           npm run sync-version
           node ../scripts/validate-version.js
           echo "VERSION=$VERSION" >> $GITHUB_ENV
-
-      - name: import certificate (macOS only)
-        if: matrix.platform == 'macos-latest'
-        env:
-          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-        run: |
-          if [ -z "$APPLE_CERTIFICATE" ] || [ -z "$APPLE_CERTIFICATE_PASSWORD" ]; then
-            echo "Apple certificate secrets not set, skipping certificate import"
-            exit 0
-          fi
-          
-          CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
-          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
-          
-          echo -n "$APPLE_CERTIFICATE" | base64 --decode > $CERTIFICATE_PATH
-          
-          security create-keychain -p "$APPLE_CERTIFICATE_PASSWORD" $KEYCHAIN_PATH
-          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
-          security unlock-keychain -p "$APPLE_CERTIFICATE_PASSWORD" $KEYCHAIN_PATH
-          
-          security import $CERTIFICATE_PATH -P "$APPLE_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
-          security list-keychain -d user -s $KEYCHAIN_PATH $(security list-keychains | sed 's/["]//g')
-          security set-key-partition-list -S apple-tool:,apple: -s -k "$APPLE_CERTIFICATE_PASSWORD" $KEYCHAIN_PATH
-          
-          echo "Certificate imported successfully"
-
-      - name: Validate notarization requirements (macOS only)
-        if: matrix.platform == 'macos-latest'
-        shell: bash
-        run: |
-          if [ -z "${{ secrets.APPLE_ID }}" ] || [ -z "${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}" ] || [ -z "${{ secrets.APPLE_TEAM_ID }}" ]; then
-            echo "ERROR: Missing required notarization secrets"
-            echo "Required: APPLE_ID, APPLE_APP_SPECIFIC_PASSWORD, APPLE_TEAM_ID"
-            exit 1
-          fi
-          echo "All notarization secrets present"
 
       - name: Generate release notes from commits
         id: release_notes
@@ -155,12 +97,6 @@ jobs:
       - uses: tauri-apps/tauri-action@v0.5
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          APPLE_SIGNING_IDENTITY: "Developer ID Application: Tony Antony (9H7RVQAP36)"
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_KEY_PASSWORD }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
